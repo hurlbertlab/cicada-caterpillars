@@ -274,11 +274,19 @@ write.csv(glm_results_post, "glm_results_post.csv", row.names = FALSE)
 url = "https://docs.google.com/spreadsheets/d/1hi7iyi7xunriU2fvFpgNVDjO5ERML4IUgzTkQjLVYCo/edit?gid=0#gid=0"
 df = gsheet2tbl(url) %>%
   mutate(DeployDate = as.Date(DeployDate, format = "%m/%d/%Y"),
-         CollectionDate = as.Date(CollectionDate, format = "%m/%d/%Y"))
+         CollectionDate = as.Date(CollectionDate, format = "%m/%d/%Y")) %>%
+  mutate(AdjustedDate = DeployDate + 4,
+         cicada_period = ifelse(AdjustedDate >= as.Date("2024-05-14") & AdjustedDate <= as.Date("2024-06-13"), 1, 0))%>%
+  mutate(date = str_extract(AdjustedDate, pattern = "\\d+-\\d+-\\d+"))%>% 
+  mutate(doy = case_when(
+    str_detect(date, "-05") ~ 121 + as.numeric(substr(date, 9, 10)),
+    str_detect(date, "-06") ~ 152 + as.numeric(substr(date, 9, 10)),
+    str_detect(date, "-07") ~ 182 + as.numeric(substr(date, 9, 10))))%>%
+  mutate(year = str_extract(DeployDate, "\\d+"))
 
 birdPred = df %>%
   filter('Not_Found' != 1) %>%
-  group_by(Name, CollectionDate) %>%
+  group_by(Name, year, CollectionDate) %>%
   summarize(numBirdStrikes = sum(Bird),
             numClayCats = n(),
             pctBird = 100*numBirdStrikes/numClayCats) %>%
@@ -325,6 +333,141 @@ summary(Mean_Noise_interaction)
 
 
 ############### Plots start here
+
+#Stacked bar graph for the strike marks (Figure 4)
+dfsum <- df %>%
+  group_by(Name, year) %>%
+  filter(year == 2025)%>%
+  summarize(Bird = sum(Bird),
+            Mammal = sum(Mammal),
+            Arthropod = sum(Arthropod),
+            Unidentified = sum(Unidentified)) %>%
+  pivot_longer(cols = c("Bird","Mammal", "Arthropod", "Unidentified"), names_to = "Category", values_to = "Count") %>%
+  mutate(
+    Name = case_when(
+      Name == "Triangle Land Conservancy - Johnston Mill Nature Preserve" ~ "Johnston Mill",
+      Name == "UNC Chapel Hill Campus" ~ "UNC",
+      Name == "Prairie Ridge Ecostation" ~ "Prairie Ridge",
+      Name == "Eno River State Park" ~ "Eno River",
+      Name == "NC Botanical Garden" ~ "NCBG",
+      TRUE ~ Name)) 
+
+my_colors <- c("orange", "skyblue", "lightgrey", "pink")
+mytable <- xtabs(Count ~ Category + Name, data = dfsum)
+mytable <- mytable[, order(mytable["Bird", ], decreasing = TRUE)]
+
+par(mar = c(6, 6, 4, 2))
+Stacked_Bar <- barplot(
+  mytable,
+  beside = FALSE,
+  col = my_colors,
+  legend = rownames(mytable),
+  args.legend = list(x = "top", cex = 1),
+  names.arg = colnames(mytable),
+  xlab = "Name",
+  ylab = "Predation",
+  ylim = c(0, 100),
+  cex.axis = 1.7,
+  cex.lab =1.7,
+  cex = 1.7)
+
+totals <- colSums(mytable)
+text(Stacked_Bar, totals, labels = totals, pos = 3, font = 2)
+
+stackHeights = apply(mytable, 2, cumsum)
+stackLower = rbind(0, stackHeights[-nrow(stackHeights), ])
+stackMidpoints = (stackHeights + stackLower) / 2
+
+for (j in seq_len(ncol(mytable))) {
+  for (i in seq_len(nrow(mytable))) {
+    countValue <- mytable[i, j]
+    if (countValue > 0) {
+      text(Stacked_Bar[j], stackMidpoints[i, j], labels = countValue, cex=1, font = 2)
+    }
+  }
+}
+
+#####This is the segments/////// 
+layout(matrix(c(1, 2, 3, 3), nrow = 2, ncol = 2, byrow = TRUE), 
+       heights = c(4, 1.5))
+
+Mean_Noise_additive <- lm(pctBird ~ mean_noise +Name, data = NoisePredation)
+summary_stats_volume <- summary(Mean_Noise_additive)
+coef_full <- coef(Mean_Noise_additive)
+intercept <- coef_full[1]
+slope <- coef_full["mean_noise"]
+
+par(mar = c(6, 6, 4, 2))
+plot(NoisePredation$mean_noise, NoisePredation$pctBird,
+     col = NoisePredation$Color, 
+     pch = NoisePredation$Symbol,
+     xlab = "Cicada Index",
+     ylab = "% Bird Predation",
+     cex.axis = 2,
+     cex.lab = 2,
+     cex = 3)
+
+# ERSP (reference site) - row 1 is intercept, row 2 is slope
+site <- "Eno River State Park"
+x1 <- min(NoisePredation$mean_noise[NoisePredation$Name == site])
+x2 <- max(NoisePredation$mean_noise[NoisePredation$Name == site])
+y1 <- coef_full[1] + x1 * coef_full[2]  # Just intercept + x1*slope
+y2 <- coef_full[1] + x2 * coef_full[2]  # Just intercept + x2*slope
+segments(x1, y1, x2, y2, 
+         col = NoisePredation$Color[NoisePredation$Name == site][1], 
+         lwd = 3)
+
+# JM - row 3 is the JM coefficient
+site <- "Triangle Land Conservancy - Johnston Mill Nature Preserve"
+x1 <- min(NoisePredation$mean_noise[NoisePredation$Name == site])
+x2 <- max(NoisePredation$mean_noise[NoisePredation$Name == site])
+y1 <- coef_full[1] + coef_full[3] + x1 * coef_full[2]  # Intercept + JM coef + x1*slope
+y2 <- coef_full[1] + coef_full[3] + x2 * coef_full[2]  # Intercept + JM coef + x2*slope
+segments(x1, y1, x2, y2, 
+         col = NoisePredation$Color[NoisePredation$Name == site][1], 
+         lwd = 3)
+
+# NCBG - row 4 is the NCBG coefficient
+site <- "NC Botanical Garden"
+x1 <- min(NoisePredation$mean_noise[NoisePredation$Name == site])
+x2 <- max(NoisePredation$mean_noise[NoisePredation$Name == site])
+y1 <- coef_full[1] + coef_full[4] + x1 * coef_full[2]  # Intercept + NCBG coef + x1*slope
+y2 <- coef_full[1] + coef_full[4] + x2 * coef_full[2]  # Intercept + NCBG coef + x2*slope
+segments(x1, y1, x2, y2, 
+         col = NoisePredation$Color[NoisePredation$Name == site][1], 
+         lwd = 3)
+
+# PRE - row 5 is the PRE coefficient
+site <- "Prairie Ridge Ecostation"
+x1 <- min(NoisePredation$mean_noise[NoisePredation$Name == site])
+x2 <- max(NoisePredation$mean_noise[NoisePredation$Name == site])
+y1 <- coef_full[1] + coef_full[5] + x1 * coef_full[2] 
+y2 <- coef_full[1] + coef_full[5] + x2 * coef_full[2]  # Intercept + PRE coef + x2*slope
+segments(x1, y1, x2, y2, 
+         col = NoisePredation$Color[NoisePredation$Name == site][1], 
+         lwd = 3)
+
+# UNC 
+site <- "UNC Chapel Hill Campus"
+x1 <- min(NoisePredation$mean_noise[NoisePredation$Name == site])
+x2 <- max(NoisePredation$mean_noise[NoisePredation$Name == site])
+y1 <- coef_full[1] + coef_full[6] + x1 * coef_full[2]  # Intercept + UNC coef + x1*slope
+y2 <- coef_full[1] + coef_full[6] + x2 * coef_full[2]  # Intercept + UNC coef + x2*slope
+segments(x1, y1, x2, y2, 
+         col = NoisePredation$Color[NoisePredation$Name == site][1], 
+         lwd = 3)
+
+summary_model <- summary(Mean_Noise_additive)
+p_value_mean_noise <- summary_model$coefficients[2, 4]
+p_text <- paste("P =", round(p_value_mean_noise, 3), "")
+legend("topright", 
+       legend = c(site_colors$Name, p_text),
+       col = c(site_colors$Color, "black"), 
+       pch = c(site_colors$Symbol, NA),
+       cex = 0.5,
+       pt.cex = 1)
+
+
 #2 panel plot for during and after emergence (Figure 7)
 layout(matrix(c(1, 2, 3, 3), nrow = 2, ncol = 2, byrow = TRUE), 
        heights = c(4, 1.5))
@@ -527,6 +670,8 @@ y_vol <- par("usr")[4] - 0.05 * (par("usr")[4] - par("usr")[3])
 text(x_vol, y_vol, p_Vol_Text2, cex = 2, adj = 0)
 
 #Forest Cover Plot
+layout(matrix(c(1, 2, 3, 3), nrow = 2, ncol = 2, byrow = TRUE), 
+       heights = c(4, 1.5))
 par(mar = c(6, 6, 5, 2))
 p_value_Forest1 <- summary_stats_Forest1$coefficients["forest_1km", 4]
 p_Forest_Text1 <- paste("P =", round(p_value_Forest1,3),"")
@@ -579,138 +724,4 @@ legend("center", fracdiff$site,
        lwd = 2, 
        pch = fracdiff$Symbol, 
        cex = 1) 
-
-
-#####This is the segments/////// 
-Mean_Noise_additive <- lm(pctBird ~ mean_noise +Name, data = NoisePredation)
-summary_stats_volume <- summary(Mean_Noise_additive)
-coef_full <- coef(Mean_Noise_additive)
-intercept <- coef_full[1]
-slope <- coef_full["mean_noise"]
-
-par(mar = c(6, 6, 4, 2))
-plot(NoisePredation$mean_noise, NoisePredation$pctBird,
-     col = NoisePredation$Color, 
-     pch = NoisePredation$Symbol,
-     xlab = "Cicada Index",
-     ylab = "% Bird Predation",
-     cex.axis = 2,
-     cex.lab = 2,
-     cex = 3)
-
-# ERSP (reference site) - row 1 is intercept, row 2 is slope
-site <- "Eno River"
-x1 <- min(NoisePredation$mean_noise[NoisePredation$Name == site])
-x2 <- max(NoisePredation$mean_noise[NoisePredation$Name == site])
-y1 <- coef_full[1] + x1 * coef_full[2]  # Just intercept + x1*slope
-y2 <- coef_full[1] + x2 * coef_full[2]  # Just intercept + x2*slope
-segments(x1, y1, x2, y2, 
-         col = NoisePredation$Color[NoisePredation$Name == site][1], 
-         lwd = 3)
-
-# JM - row 3 is the JM coefficient
-site <- "Johnston Mill"
-x1 <- min(NoisePredation$mean_noise[NoisePredation$Name == site])
-x2 <- max(NoisePredation$mean_noise[NoisePredation$Name == site])
-y1 <- coef_full[1] + coef_full[3] + x1 * coef_full[2]  # Intercept + JM coef + x1*slope
-y2 <- coef_full[1] + coef_full[3] + x2 * coef_full[2]  # Intercept + JM coef + x2*slope
-segments(x1, y1, x2, y2, 
-         col = NoisePredation$Color[NoisePredation$Name == site][1], 
-         lwd = 3)
-
-# NCBG - row 4 is the NCBG coefficient
-site <- "NCBG"
-x1 <- min(NoisePredation$mean_noise[NoisePredation$Name == site])
-x2 <- max(NoisePredation$mean_noise[NoisePredation$Name == site])
-y1 <- coef_full[1] + coef_full[4] + x1 * coef_full[2]  # Intercept + NCBG coef + x1*slope
-y2 <- coef_full[1] + coef_full[4] + x2 * coef_full[2]  # Intercept + NCBG coef + x2*slope
-segments(x1, y1, x2, y2, 
-         col = NoisePredation$Color[NoisePredation$Name == site][1], 
-         lwd = 3)
-
-# PRE - row 5 is the PRE coefficient
-site <- "Prairie Ridge"
-x1 <- min(NoisePredation$mean_noise[NoisePredation$Name == site])
-x2 <- max(NoisePredation$mean_noise[NoisePredation$Name == site])
-y1 <- coef_full[1] + coef_full[5] + x1 * coef_full[2] 
-y2 <- coef_full[1] + coef_full[5] + x2 * coef_full[2]  # Intercept + PRE coef + x2*slope
-segments(x1, y1, x2, y2, 
-         col = NoisePredation$Color[NoisePredation$Name == site][1], 
-         lwd = 3)
-
-# UNC 
-site <- "UNC Campus"
-x1 <- min(NoisePredation$mean_noise[NoisePredation$Name == site])
-x2 <- max(NoisePredation$mean_noise[NoisePredation$Name == site])
-y1 <- coef_full[1] + coef_full[6] + x1 * coef_full[2]  # Intercept + UNC coef + x1*slope
-y2 <- coef_full[1] + coef_full[6] + x2 * coef_full[2]  # Intercept + UNC coef + x2*slope
-segments(x1, y1, x2, y2, 
-         col = NoisePredation$Color[NoisePredation$Name == site][1], 
-         lwd = 3)
-
-summary_model <- summary(Mean_Noise_additive)
-p_value_mean_noise <- summary_model$coefficients[2, 4]
-p_text <- paste("P =", round(p_value_mean_noise, 3), "")
-legend("topright", 
-       legend = c(color_df$Name, p_text),
-       col = c(color_df$Color, "black"), 
-       pch = c(color_df$Symbol, NA),
-       cex = 1.7,
-       pt.cex = 2.5)
-
-
-
-
-
-#Stacked bar graph for the strike marks
-dfsum <- df %>%
-  group_by(Name) %>%
-  summarize(Bird = sum(Bird),
-            Mammal = sum(Mammal),
-            Arthropod = sum(Arthropod),
-            Unidentified = sum(Unidentified)) %>%
-  pivot_longer(cols = c("Bird","Mammal", "Arthropod", "Unidentified"), names_to = "Category", values_to = "Count") %>%
-  mutate(
-    Name = case_when(
-      Name == "Triangle Land Conservancy - Johnston Mill Nature Preserve" ~ "Johnston Mill",
-      Name == "UNC Chapel Hill Campus" ~ "UNC",
-      Name == "Prairie Ridge Ecostation" ~ "Prairie Ridge",
-      Name == "Eno River State Park" ~ "Eno River",
-      Name == "NC Botanical Garden" ~ "NCBG",
-      TRUE ~ Name)) 
-
-my_colors <- c("orange", "skyblue", "lightgrey", "pink")
-mytable <- xtabs(Count ~ Category + Name, data = dfsum)
-mytable <- mytable[, order(mytable["Bird", ], decreasing = TRUE)]
-
-par(mar = c(6, 6, 4, 2))
-Stacked_Bar <- barplot(
-  mytable,
-  beside = FALSE,
-  col = my_colors,
-  legend = rownames(mytable),
-  args.legend = list(x = "top", cex = 1.7),
-  names.arg = colnames(mytable),
-  xlab = "Name",
-  ylab = "Predation",
-  ylim = c(0, 100),
-  cex.axis = 1.7,
-  cex.lab =1.7,
-  cex = 1.7)
-
-totals <- colSums(mytable)
-text(Stacked_Bar, totals, labels = totals, pos = 3, font = 2)
-
-stackHeights = apply(mytable, 2, cumsum)
-stackLower = rbind(0, stackHeights[-nrow(stackHeights), ])
-stackMidpoints = (stackHeights + stackLower) / 2
-
-for (j in seq_len(ncol(mytable))) {
-  for (i in seq_len(nrow(mytable))) {
-    countValue <- mytable[i, j]
-    if (countValue > 0) {
-      text(Stacked_Bar[j], stackMidpoints[i, j], labels = countValue, cex=1, font = 2)
-    }
-  }
-}
 
