@@ -46,6 +46,7 @@ predation = function(x_min = 130, x_max = 190,
                      labelsize = 1,
                      mainsize = 1,
                      main,
+                     legcex = 0.5,
                      ...) {
   ifelse("eno" %in% sites, s1 <- "Eno River State Park", s1 <- 0)
   ifelse("jm" %in% sites, s2 <- "Triangle Land Conservancy - Johnston Mill Nature Preserve", s2 <- 0)
@@ -63,11 +64,11 @@ predation = function(x_min = 130, x_max = 190,
   
   plot(birdPred$julianday[birdPred$Name == site[1] & birdPred$year == yr[1]], 
        birdPred$pctBird[birdPred$Name == site[1] & birdPred$year == yr[1]], 
-       xlab = "Date", ylab = "% Bird Strikes", ylim = c(0, 50), 
+       xlab = "Date", ylab = "% Bird Strikes", ylim = c(0, 60), 
        xlim = c(x_min, x_max),
        xaxt = "n", 
        cex.axis = axissize, cex.lab = labelsize, type = type, 
-       col = colsh$col, cex = shsize, pch = colsh$shape, lwd = 2,
+       col = colsh$col[1], cex = shsize, pch = colsh$shape[1], lwd = 2,
        main = main, cex.main = mainsize)
   if(mode == 1){
   for(i in 1:5){
@@ -88,45 +89,59 @@ predation = function(x_min = 130, x_max = 190,
            type = type, col = colsh$col[i], pch = colsh$shape[i], cex = shsize, lwd = 2)}
   }
   axis.Date(1, at = seq(x_min, x_max, by = 12), format = "%b %d", cex.axis = 1)
-  {legend("topleft", legend = colsh[,1],
+  legend("topleft", legend = colsh[,1],
          col = colsh$col,
          pch = colsh$shape,
          lwd = 2,
-         cex = 1)}
+         cex = legcex)
 }
 
-
-predation(sites = c("eno"), yr = 2024, mode = 2, main = "Clay Caterpillar Predation at Eno")
+predation(sites = c("eno"), yr = c(2024, 2025), mode = 1, main = "Clay Caterpillar Predation at Eno", legcex = 1)
+predation(sites = c("eno", "jm", "pr", "ncbg", "unc"), yr = 2024, mode = 2, main = "Clay Caterpillar Predation at All Sites")
 
 ###adding
-clayweek = Vectorize(function(yr1, yr2, site, cday){
+preddif = function(yr1, yr2, site,
+                   new = F,
+                   x_min = 130, x_max = 190,
+                   ylim = c(-40, 40),
+                   type = 'b',
+                   shsize = 2,
+                   axissize = 1,
+                   labelsize = 1,
+                   mainsize = 1,
+                   main = paste(yr2, "-", yr1),
+                   legcex = 0.5,
+                   ...){
   birdPredyr1 = birdPred%>%ungroup()%>%filter(year == yr1, Name == site)
-  print(birdPredyr1)
   birdPredyr2 = birdPred%>%ungroup()%>%filter(year == yr2, Name == site)
-  print(birdPredyr2)
-  bpmatch = birdPredyr1%>%
-    select(year, Name, julianday)%>%
-    filter((birdPredyr2$julianday[cday] >= (julianday - 5) & birdPredyr2$julianday[cday] <= (julianday + 5)))
-if(length(bpmatch$julianday) == 1){return(bpmatch$julianday[1])}
-else{return(NA)}
-},
-vectorize.args = "cday")
+  yr2yr = left_join(birdPredyr1, birdPredyr2, by = join_by(closest(x$julianday > y$julianday)))%>%
+    mutate(difference = pctBird.y - pctBird.x)
+  color = sitecolsh$col[sitecolsh$site == site]
+  shape = sitecolsh$shape[sitecolsh$site == site]
+  if(new == T){
+  plot(yr2yr$julianday.x, yr2yr$difference,
+       xlab = "Date", ylab = "Change in % Bird Strikes", ylim = ylim, 
+       xlim = c(x_min, x_max),
+       xaxt = "n", 
+       cex.axis = axissize, cex.lab = labelsize, type = type, 
+       col = color, cex = shsize, pch = shape, lwd = 2,
+       main = main, cex.main = 1)
+  }
+  if(new == F){
+  points(yr2yr$julianday.x, yr2yr$difference,
+         type = type, col = color, pch = shape, cex = shsize, lwd = 2)
+  }
+  legend("topleft", legend = sitecolsh$site,
+         col = sitecolsh$col,
+         pch = sitecolsh$shape,
+         lwd = 2,
+         cex = legcex)
+  axis.Date(1, at = seq(x_min, x_max, by = 12), format = "%b %d", cex.axis = 1)
+  return(yr2yr)
+  }
 
-claymatch = function(yr1, yr2, site){
-  cw = clayweek(yr1, yr2, site, c(1:4))%>%unlist()
-  yr2match = birdPred%>%
-    filter(year == yr2, Name == site)%>%
-    mutate(claybin = cw)%>%
-    left_join(filter(birdPred, year == yr1, Name == site), by = c("Name","year"))
-  return(yr2match)}
-
-preddif = claymatch(2024, 2025, "NC Botanical Garden")
-plot
-
-
-predationdif = function(yr1, yr2, site){
-  claymatch
-  
-  birdPred$pctBird - birdPred$pctBird
-  plot()
-}
+preddif(2024, 2025, "Eno River State Park", new = T)
+preddif(2024, 2025, "Triangle Land Conservancy - Johnston Mill Nature Preserve", new = F)
+preddif(2024, 2025, "Prairie Ridge Ecostation", new = F)
+preddif(2024, 2025, "NC Botanical Garden", new = F)
+preddif(2024, 2025, "UNC Chapel Hill Campus", new = F)
