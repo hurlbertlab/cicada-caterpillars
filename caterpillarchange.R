@@ -5,7 +5,6 @@ library(gsheet)
 library(maps)
 library(sf)
 library(stringr)
-library(randomcoloR)
 
 sitecolsh = data.frame(site = c("Eno River State Park", 
                                 "Triangle Land Conservancy - Johnston Mill Nature Preserve", 
@@ -49,9 +48,10 @@ srvyData <- fullDataset%>%
                                              "Triangle Land Conservancy - Johnston Mill Nature Preserve",
                                              "Prairie Ridge Ecostation",
                                              "NC Botanical Garden",
-                                             "UNC Chapel Hill Campus"))
+                                             "UNC Chapel Hill Campus"))%>%
+  mutate(julianweek = 7*floor(julianday/7) + 4)
 
-#preparatory functions for meanDensity
+#meanDensity is similar to meanDensityByWeek, but is able to take defense as an argument
 Mode = function(x){ 
   if (!is.numeric(x)) {
     stop("values must be numeric for mode calculation")
@@ -62,11 +62,6 @@ Mode = function(x){
   return(max(mod))
 }
 
-#this adds julianweek or two week weekbin as options externally to meanDensity so that it is not inherently byWeek
-srvyData = srvyData%>%
-  # mutate(weekbin = bugsbyclayday)%>%
-  mutate(julianweek = 7*floor(julianday/7) + 4)
-
 meanDensity = function(surveyData = srvyData,
                        year = 2024,
                        site = "all",
@@ -75,12 +70,9 @@ meanDensity = function(surveyData = srvyData,
                        minLength = 0,         
                        jdRange = c(1,365),
                        outlierCount = 10000,
-                       plot = FALSE,
-                       plotVar = 'fracSurveys', # 'meanDensity' or 'fracSurveys' or 'meanBiomass'
                        minSurveyCoverage = 0.8, 
-                       allDates = TRUE,
+                       allDates = FALSE,
                        new = TRUE,
-                       color = 'black',
                        defense = "none",
                        ...)                  
 
@@ -108,9 +100,7 @@ meanDensity = function(surveyData = srvyData,
     summarize(nSurveyBranches = n_distinct(PlantFK),
               nSurveys = n_distinct(ID)) %>%
     mutate(modalBranchesSurveyed = Mode(5*ceiling(nSurveyBranches/5)),
-           nSurveySets = nSurveys/modalBranchesSurveyed,
-           modalSurveySets = Mode(round(nSurveySets)),
-           okWeek = ifelse(nSurveySets/modalSurveySets >= minSurveyCoverage, 1, 0))
+           okWeek = ifelse(nSurveyBranches/modalBranchesSurveyed >= minSurveyCoverage, 1, 0))
   if (allDates) {
     effortByWeek$okWeek = 1
   }
@@ -176,6 +166,17 @@ plotDensity = function(site = "all",
   }
 }
 
+##plot initializer
+PLOT = function(x_min = 130, x_max = 210){plot(c(0, 1), c(0, 1),
+     xlab = "Date", ylab = "Caterpillar Count",
+     xlim = c(x_min, x_max), ylim = c(0, 20),
+     xaxt = "n",
+     cex.axis = 1, cex.lab = 1,
+     type = "b", cex = 0, pch = 16, ...)
+axis.Date(1, at = seq(x_min, x_max, by = 12), format = "%b %d", cex.axis = 1)
+}
+
+
 plotDensity(site = c("all"), year = 2025, ordersToInclude = "caterpillar")
 plotDensity(site = c("all"), year = 2024, ordersToInclude = "caterpillar", new = FALSE)
 plotDensity(site = c("Eno River State Park"), year = 2025, ordersToInclude = "caterpillar", new = FALSE)
@@ -239,9 +240,23 @@ catdif = function(surveyData = srvyData, yr1, yr2, site,
 }
 
 ##ratio of defended to undefended
+catratio = function(site, yr, defense){
+  def = meanDensity(surveyData, site = site, year = yr, defense = defense)%>%ungroup()%>%
+    select(julianweek, meanDensity, fracSurveys, meanBiomass)
+  undef = meanDensity(surveyData, site = site, year = yr1, defense = "none")%>%ungroup()%>%
+    select(julianweek, meanDensity, fracSurveys, meanBiomass)
+  
+  defratio = left_join(def, undef, by = join_by("julianweek"))%>%
+    mutate(fracratio = fracSurveys.x/fracSurveys.y)%>%
+    mutate(biomassratio = meanBiomass.x/meanBiomass.y)%>%
+    mutate(densityratio = meanDensity.x/meanDensity.y)
+  color = defcolsh$col[defcolsh$defense == defense]
+  shape = sitecolsh$shape[defcolsh$defense == defense]
+}
+
 catratiodif = function(surveyData = srvyData, yr1, yr2, site,
                   plotVar = "fracSurveysdif",
-                  defense = "all", #(all defended), or "hairy", "tented", or "rolled"
+                  defense = "all defended", #"hairy", "tented", or "rolled"
                   new = T,
                   x_min = 130, x_max = 210,
                   ylim = c(-40, 40),
@@ -262,12 +277,12 @@ catratiodif = function(surveyData = srvyData, yr1, yr2, site,
   catyr2undef = meanDensity(surveyData, site = site, year = yr1, defense = "none")%>%ungroup()%>%
     select(julianweek, totalCount, totalBiomass, meanDensity, fracSurveys, meanBiomass)
   
-  yr1ratio = left_join(catyr1def, catyr2undef, by = join_by("julianweek"))%>%
+  yr1ratio = left_join(catyr1def, catyr1undef, by = join_by("julianweek"))%>%
     mutate(ratio = fracSurveys.x/fracSurveys.y)
   yr2ratio = left_join(catyr2def, catyr2undef, by = join_by("julianweek"))%>%
     mutate(ratio = fracSurveys.x/fracSurveys.y)
   yr2yr = left_join(yr1ratio, yr2ratio, by = join_by("julianweek"))%>%
-    mutate(ratiodif = ratio.y - ratio.x)%>%
+    mutate(ratiodif = ratio.y - ratio.x)#%>%
     # mutate(meanBiomassdif = meanBiomass.y - meanBiomass.x)%>%
     # mutate(totalCountdif = totalCount.y - totalCount.x)
   
@@ -295,6 +310,8 @@ catratiodif = function(surveyData = srvyData, yr1, yr2, site,
   return(yr2yr)
 }
 
+##execute 
+plotting
 "Eno River State Park"
 "Triangle Land Conservancy - Johnston Mill Nature Preserve"
 "Prairie Ridge Ecostation"
