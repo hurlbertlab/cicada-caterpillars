@@ -72,7 +72,6 @@ meanDensity = function(surveyData = srvyData,
                        outlierCount = 10000,
                        minSurveyCoverage = 0.8, 
                        allDates = FALSE,
-                       new = TRUE,
                        defense = "any",
                        ...)                  
 
@@ -156,14 +155,14 @@ plotDensity = function(site = "all",
   arthCount = meanDensity(surveyData, year, site, ordersToInclude)
   color = sitecolsh$col[sitecolsh$site == site]
   
-  if (new){
-  plot(arthCount$julianweek, arthCount[, plotVar], type = 'l', col = color, las = 1, ...)
-  points(arthCount$julianweek, arthCount[, plotVar], pch = 16, col = color, ...)
-  } else if (new==F) {
   points(arthCount$julianweek, arthCount[, plotVar], type = 'l', col = color, ...)
   points(arthCount$julianweek, arthCount[, plotVar], pch = 16, col = color, ...)
-  }
+  legend("topright", legend = sitecolsh$site,
+         col = sitecolsh$col,
+         lwd = 2,
+         cex = 1)
 }
+
 
 ##plot initializer - this creates an empty plot and removes the need for new = T/F (everything will be new = F)
 PLOT = function(x_min = 130, x_max = 210, ...){plot(0, 0,
@@ -174,18 +173,6 @@ axis.Date(1, at = seq(x_min, x_max, by = 15), format = "%b %d", ...)
 }
 PLOT(xlab = "Date", ylab = "Caterpillar Count", cex.axis = 1, cex.lab = 1)
 
-plotDensity(site = c("all"), year = 2025, ordersToInclude = "caterpillar")
-plotDensity(site = c("all"), year = 2024, ordersToInclude = "caterpillar", new = FALSE)
-plotDensity(site = c("Eno River State Park"), year = 2025, ordersToInclude = "caterpillar", new = FALSE)
-plotDensity(site = c("Eno River State Park"), year = 2024, ordersToInclude = "caterpillar", new = FALSE)
-plotDensity(site = c("Triangle Land Conservancy - Johnston Mill Nature Preserve"), year = 2025, ordersToInclude = "caterpillar", new = FALSE)
-plotDensity(site = c("Triangle Land Conservancy - Johnston Mill Nature Preserve"), year = 2024, ordersToInclude = "caterpillar", new = FALSE)
-plotDensity(site = c("Prairie Ridge Ecostation"), year = 2025, ordersToInclude = "caterpillar", new = FALSE)
-plotDensity(site = c("Prairie Ridge Ecostation"), year = 2024, ordersToInclude = "caterpillar", new = FALSE)
-plotDensity(site = c("NC Botanical Garden"), year = 2025, ordersToInclude = "caterpillar", new = FALSE)
-plotDensity(site = c("NC Botanical Garden"), year = 2024, ordersToInclude = "caterpillar", new = FALSE)
-plotDensity(site = c("UNC Chapel Hill Campus"), year = 2025, ordersToInclude = "caterpillar", new = FALSE)
-plotDensity(site = c("UNC Chapel Hill Campus"), year = 2024, ordersToInclude = "caterpillar", new = FALSE)
 
 #taking the difference between years
 catdif = function(surveyData = srvyData, yr1, yr2, site,
@@ -310,13 +297,25 @@ catratiodif = function(surveyData = srvyData, yr1, yr2, site,
   return(yr2yr)
 }
 
-##execute plotting
+#execute plotting
 "Eno River State Park"
 "Triangle Land Conservancy - Johnston Mill Nature Preserve"
 "Prairie Ridge Ecostation"
 "NC Botanical Garden"
 "UNC Chapel Hill Campus"
-sitecatdif = function(ylim = c(-25,25), main, def = c(1,1,1,1,1,1), yr1, yr2, site, legend = F){
+##graphing parameters can be passed into PLOT, catdif, or catratio
+##plots density
+sitedensity = function(ylim = c(0, 50), main, sites = c(1,1,1,1,1,1), yr, ordersToInclude = "caterpillar"){
+  PLOT(ylim = ylim, xlab = "Date", ylab = "fracSurveys", main = main, cex.main = 2, cex.axis = 1.5, cex.lab = 1.5)
+  if(sites[1]==1) plotDensity(year = yr, site = "Eno River State Park", ordersToInclude = ordersToInclude)
+  if(sites[2]==1) plotDensity(year = yr, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", ordersToInclude = ordersToInclude)
+  if(sites[3]==1) plotDensity(year = yr, site = "Prairie Ridge Ecostation", ordersToInclude = ordersToInclude)
+  if(sites[4]==1) plotDensity(year = yr, site = "NC Botanical Garden", ordersToInclude = ordersToInclude)
+  if(sites[5]==1) plotDensity(year = yr, site = "UNC Chapel Hill Campus", ordersToInclude = ordersToInclude)
+  if(sites[6]==1) plotDensity(year = yr, site = "all", ordersToInclude = ordersToInclude)
+}
+##plots density difference between two years
+sitecatdif = function(ylim = c(-25, 25), main, def = c(1,1,1,1,1,1), yr1, yr2, site, legend = F){
   PLOT(ylim = ylim, xlab = "Date", ylab = "Caterpillar Count", main = main, cex.main = 2, cex.axis = 1.5, cex.lab = 1.5)
   if(def[1]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "any", legend = legend)
   if(def[2]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "all defended")
@@ -326,7 +325,8 @@ sitecatdif = function(ylim = c(-25,25), main, def = c(1,1,1,1,1,1), yr1, yr2, si
   if(def[6]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "rolled")
 }
 
-sitecatratio = function(ylim = c(0,5), main, def = c(1,1,1,1), yr, site, legend = "def"){
+##plots ratios for multiple defense types for one site
+sitecatratio = function(ylim = c(0, 5), main, def = c(1,1,1,1), yr, site, legend = "def"){
   PLOT(ylim = ylim, xlab = "Date", ylab = "Defended/Undefended Caterpillar Ratio", main = main, cex.main = 2, cex.axis = 1.5, cex.lab = 1.5)
   if(def[1]==1) catratio(yr = yr, site = site, defense = "all defended", legend = legend)
   if(def[2]==1) catratio(yr = yr, site = site, defense = "hairy")
@@ -334,16 +334,18 @@ sitecatratio = function(ylim = c(0,5), main, def = c(1,1,1,1), yr, site, legend 
   if(def[4]==1) catratio(yr = yr, site = site, defense = "rolled")
 }
 
-sitescatratio = function(ylim = c(0, 0.5), main, def = c(1,1,1,1,1,1), yr, site, legend = "site"){
+##plots ratio for one defense type for all sites, probably more useful
+sitescatratio = function(ylim = c(0, 0.5), main, sites = c(1,1,1,1,1,1), yr, defense = defense, legend = "site"){
   PLOT(ylim = ylim, xlab = "Date", ylab = "Defended/Undefended Caterpillar Ratio", main = main, cex.main = 2, cex.axis = 1.5, cex.lab = 1.5)
-  if(def[1]==1) catratio(yr = yr, site = "Eno River State Park", defense = "all defended", legend = legend, legcex = 1)
-  if(def[2]==1) catratio(yr = yr, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", defense = "all defended")
-  if(def[3]==1) catratio(yr = yr, site = "Prairie Ridge Ecostation", defense = "all defended")
-  if(def[4]==1) catratio(yr = yr, site = "NC Botanical Garden", defense = "all defended")
-  if(def[5]==1) catratio(yr = yr, site = "UNC Chapel Hill Campus", defense = "all defended")
-  if(def[6]==1) catratio(yr = yr, site = "all", defense = "all defended")
+  if(sites[1]==1) catratio(yr = yr, site = "Eno River State Park", defense = defense, legend = legend, legcex = 1)
+  if(sites[2]==1) catratio(yr = yr, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", defense = defense)
+  if(sites[3]==1) catratio(yr = yr, site = "Prairie Ridge Ecostation", defense = defense)
+  if(sites[4]==1) catratio(yr = yr, site = "NC Botanical Garden", defense = defense)
+  if(sites[5]==1) catratio(yr = yr, site = "UNC Chapel Hill Campus", defense = defense)
+  if(sites[6]==1) catratio(yr = yr, site = "all", defense = defense)
 }
 
+##plots ratio difference between two years
 
 
 sitecatdif(main = "2025-2024 at Eno", def = c(1,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", legend = T)
@@ -362,3 +364,4 @@ sitecatdif(ylim = c(-30, 25), main = "2024-pre2024 at UNC", def = c(1,1,1,0,0,0)
 sitescatratio(main = "Defended/Undefended ratio in 2024", yr = 2024)
 sitescatratio(main = "Defended/Undefended ratio in 2025", yr = 2025)
 
+sitedensity(ylim = c(0,10), main = "Moth Density 2025", yr = 2025, ordersToInclude = "moths")
