@@ -5,7 +5,6 @@ library(gsheet)
 library(maps)
 library(sf)
 library(stringr)
-library(randomcoloR)
 
 sitecolsh = data.frame(site = c("Eno River State Park", 
                                 "Triangle Land Conservancy - Johnston Mill Nature Preserve", 
@@ -45,13 +44,14 @@ birdPred = df %>%
             pctBird = 100 * numBirdStrikes / numClayCats)
 
 srvyData <- fullDataset%>%
-  filter(Year %in% c(2024:2025), Name %in% c("Eno River State Park",
+  filter(Year %in% c(2021:2025), Name %in% c("Eno River State Park",
                                              "Triangle Land Conservancy - Johnston Mill Nature Preserve",
                                              "Prairie Ridge Ecostation",
                                              "NC Botanical Garden",
-                                             "UNC Chapel Hill Campus"))
+                                             "UNC Chapel Hill Campus"))%>%
+  mutate(julianweek = 7*floor(julianday/7) + 4)
 
-#preparatory functions for meanDensity
+#meanDensity is similar to meanDensityByWeek, but is able to take defense as an argument
 Mode = function(x){ 
   if (!is.numeric(x)) {
     stop("values must be numeric for mode calculation")
@@ -62,11 +62,6 @@ Mode = function(x){
   return(max(mod))
 }
 
-#this adds julianweek or two week weekbin as options externally to meanDensity so that it is not inherently byWeek
-srvyData = srvyData%>%
-  # mutate(weekbin = bugsbyclayday)%>%
-  mutate(julianweek = 7*floor(julianday/7) + 4)
-
 meanDensity = function(surveyData = srvyData,
                        year = 2024,
                        site = "all",
@@ -75,17 +70,13 @@ meanDensity = function(surveyData = srvyData,
                        minLength = 0,         
                        jdRange = c(1,365),
                        outlierCount = 10000,
-                       plot = FALSE,
-                       plotVar = 'fracSurveys', # 'meanDensity' or 'fracSurveys' or 'meanBiomass'
                        minSurveyCoverage = 0.8, 
-                       allDates = TRUE,
+                       allDates = FALSE,
                        new = TRUE,
-                       color = 'black',
-                       defense = "none",
+                       defense = "any",
                        ...)                  
 
 {
-
   if(site=="all") {
     site = c("Eno River State Park",
     "Triangle Land Conservancy - Johnston Mill Nature Preserve",
@@ -108,9 +99,7 @@ meanDensity = function(surveyData = srvyData,
     summarize(nSurveyBranches = n_distinct(PlantFK),
               nSurveys = n_distinct(ID)) %>%
     mutate(modalBranchesSurveyed = Mode(5*ceiling(nSurveyBranches/5)),
-           nSurveySets = nSurveys/modalBranchesSurveyed,
-           modalSurveySets = Mode(round(nSurveySets)),
-           okWeek = ifelse(nSurveySets/modalSurveySets >= minSurveyCoverage, 1, 0))
+           okWeek = ifelse(nSurveyBranches/modalBranchesSurveyed >= minSurveyCoverage, 1, 0))
   if (allDates) {
     effortByWeek$okWeek = 1
   }
@@ -176,6 +165,15 @@ plotDensity = function(site = "all",
   }
 }
 
+##plot initializer - this creates an empty plot and removes the need for new = T/F (everything will be new = F)
+PLOT = function(x_min = 130, x_max = 210, ...){plot(0, 0,
+     xlim = c(x_min, x_max),
+     xaxt = "n",
+     type = "b", cex = 0, lwd = 0, ...)
+axis.Date(1, at = seq(x_min, x_max, by = 15), format = "%b %d", ...)
+}
+PLOT(xlab = "Date", ylab = "Caterpillar Count", cex.axis = 1, cex.lab = 1)
+
 plotDensity(site = c("all"), year = 2025, ordersToInclude = "caterpillar")
 plotDensity(site = c("all"), year = 2024, ordersToInclude = "caterpillar", new = FALSE)
 plotDensity(site = c("Eno River State Park"), year = 2025, ordersToInclude = "caterpillar", new = FALSE)
@@ -188,25 +186,14 @@ plotDensity(site = c("NC Botanical Garden"), year = 2025, ordersToInclude = "cat
 plotDensity(site = c("NC Botanical Garden"), year = 2024, ordersToInclude = "caterpillar", new = FALSE)
 plotDensity(site = c("UNC Chapel Hill Campus"), year = 2025, ordersToInclude = "caterpillar", new = FALSE)
 plotDensity(site = c("UNC Chapel Hill Campus"), year = 2024, ordersToInclude = "caterpillar", new = FALSE)
-plot(meanDensity(site = c("all"), year = 2025, ordersToInclude = "caterpillar", jdrange = c(130, 160))$fracSurveys -
-     meanDensity(site = c("all"), year = 2024, ordersToInclude = "caterpillar", jdrange = c(130, 160))$fracSurveys,
-     meanDensity(site = c("all"), year = 2024, ordersToInclude = "caterpillar", jdrange = c(125, 190))$julianweek)
-meanDensity()
 
+#taking the difference between years
 catdif = function(surveyData = srvyData, yr1, yr2, site,
                plotVar = "fracSurveysdif",
-               defense = "any", #or "none", "all" (all defended), "hairy", "tented", or "rolled"
-                   new = T,
-                   x_min = 130, x_max = 210,
-                   ylim = c(-40, 40),
-                   type = 'b',
-                   shsize = 1,
-                   axissize = 1,
-                   labelsize = 1,
-                   mainsize = 1,
-                   main = paste(site, yr2, "-", yr1),
-                   legcex = 0.5,
-                   ...){
+               defense = "any", #or "none", "all defended", "hairy", "tented", or "rolled"
+               legend = FALSE,
+               legcex = 1,
+               ...){
   catyr1 = meanDensity(surveyData, site = site, year = yr1, defense = defense)%>%ungroup()
   catyr2 = meanDensity(surveyData, site = site, year = yr2, defense = defense)%>%ungroup()
   yr2yr = left_join(catyr1, catyr2, by = join_by("julianweek"))%>%
@@ -215,33 +202,61 @@ catdif = function(surveyData = srvyData, yr1, yr2, site,
     mutate(totalCountdif = totalCount.y - totalCount.x)
     
   color = defcolsh$col[defcolsh$defense == defense]
-  shape = sitecolsh$shape[defcolsh$defense == defense]
-  if(new == T){
-    plot(yr2yr$julianweek, yr2yr$fracSurveysdif,
-         xlab = "Date", ylab = "Change in Caterpillar Count", ylim = ylim, 
-         xlim = c(x_min, x_max),
-         xaxt = "n", 
-         cex.axis = axissize, cex.lab = labelsize, type = type, 
-         col = color, cex = shsize, pch = shape, lwd = 2,
-         main = main, cex.main = 1)
-    # legend("topleft", legend = defcolsh$defense,
-    #        col = defcolsh$col,
-    #        pch = defcolsh$shape,
-    #        lwd = 2,
-    #        cex = legcex)
-  }
-  if(new == F){
-    points(yr2yr$julianweek, yr2yr$fracSurveysdif,
-           type = type, col = color, pch = shape, cex = shsize, lwd = 2)
-  }
-  axis.Date(1, at = seq(x_min, x_max, by = 12), format = "%b %d", cex.axis = 1)
+  shape = defcolsh$shape[defcolsh$defense == defense]
+  points(yr2yr$julianweek, yr2yr[, plotVar],
+         type = 'b', col = color, cex = 1, pch = shape, lwd = 2)
+  abline(h = 0, lty = 3)
+  if(legend){legend("topright", legend = defcolsh$defense,
+         col = defcolsh$col,
+         pch = defcolsh$shape,
+         lwd = 2,
+         cex = legcex)}
   return(yr2yr)
 }
 
 ##ratio of defended to undefended
+catratio = function(surveyData = srvyData, site, yr,
+                    plotVar = "fracratio",
+                    defense = "all defended",
+                    legend = "site",
+                    legcex = 1.5, ...){
+  def = meanDensity(surveyData, site = site, year = yr, defense = defense)%>%ungroup()%>%
+    select(julianweek, meanDensity, fracSurveys, meanBiomass)
+  undef = meanDensity(surveyData, site = site, year = yr, defense = "none")%>%ungroup()%>%
+    select(julianweek, meanDensity, fracSurveys, meanBiomass)
+  
+  defratio = left_join(def, undef, by = join_by("julianweek"))%>%
+    mutate(fracratio = fracSurveys.x/fracSurveys.y)%>%
+    mutate(biomassratio = meanBiomass.x/meanBiomass.y)%>%
+    mutate(densityratio = meanDensity.x/meanDensity.y)
+  color = defcolsh$col[defcolsh$defense == defense]
+  shape = sitecolsh$shape[defcolsh$defense == defense]
+
+  if(legend == "def"){
+    color = defcolsh$col[defcolsh$defense == defense]
+    shape = sitecolsh$shape[defcolsh$defense == defense]
+    legend("topright", legend = defcolsh$defense,
+           col = defcolsh$col,
+           pch = defcolsh$shape,
+           lwd = 2,
+           cex = legcex)}
+  if(legend == "site"){
+    color = sitecolsh$col[sitecolsh$site == site]
+    shape = sitecolsh$shape[sitecolsh$site == site]
+    legend("topright", legend = sitecolsh$site,
+           col = sitecolsh$col,
+           pch = sitecolsh$shape,
+           lwd = 2,
+           cex = legcex)}
+  points(defratio$julianweek, defratio[, plotVar],
+         type = 'b', col = color, cex = 1, pch = shape, lwd = 2)
+  return(defratio)
+}
+
+##next time: take difference
 catratiodif = function(surveyData = srvyData, yr1, yr2, site,
                   plotVar = "fracSurveysdif",
-                  defense = "all", #(all defended), or "hairy", "tented", or "rolled"
+                  defense = "all defended", #"hairy", "tented", or "rolled"
                   new = T,
                   x_min = 130, x_max = 210,
                   ylim = c(-40, 40),
@@ -262,12 +277,12 @@ catratiodif = function(surveyData = srvyData, yr1, yr2, site,
   catyr2undef = meanDensity(surveyData, site = site, year = yr1, defense = "none")%>%ungroup()%>%
     select(julianweek, totalCount, totalBiomass, meanDensity, fracSurveys, meanBiomass)
   
-  yr1ratio = left_join(catyr1def, catyr2undef, by = join_by("julianweek"))%>%
+  yr1ratio = left_join(catyr1def, catyr1undef, by = join_by("julianweek"))%>%
     mutate(ratio = fracSurveys.x/fracSurveys.y)
   yr2ratio = left_join(catyr2def, catyr2undef, by = join_by("julianweek"))%>%
     mutate(ratio = fracSurveys.x/fracSurveys.y)
   yr2yr = left_join(yr1ratio, yr2ratio, by = join_by("julianweek"))%>%
-    mutate(ratiodif = ratio.y - ratio.x)%>%
+    mutate(ratiodif = ratio.y - ratio.x)#%>%
     # mutate(meanBiomassdif = meanBiomass.y - meanBiomass.x)%>%
     # mutate(totalCountdif = totalCount.y - totalCount.x)
   
@@ -295,31 +310,55 @@ catratiodif = function(surveyData = srvyData, yr1, yr2, site,
   return(yr2yr)
 }
 
+##execute plotting
 "Eno River State Park"
 "Triangle Land Conservancy - Johnston Mill Nature Preserve"
 "Prairie Ridge Ecostation"
 "NC Botanical Garden"
 "UNC Chapel Hill Campus"
-sitedif = function(yr1, yr2, site){
-  catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "any", new = T)
-  catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "all defended", new = F)
-  catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "none", new = F)
-  catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "hairy", new = F)
-  catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "tented", new = F)
-  catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "rolled", new = F)
+sitecatdif = function(ylim = c(-25,25), main, def = c(1,1,1,1,1,1), yr1, yr2, site, legend = F){
+  PLOT(ylim = ylim, xlab = "Date", ylab = "Caterpillar Count", main = main, cex.main = 2, cex.axis = 1.5, cex.lab = 1.5)
+  if(def[1]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "any", legend = legend)
+  if(def[2]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "all defended")
+  if(def[3]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "none")
+  if(def[4]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "hairy")
+  if(def[5]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "tented")
+  if(def[6]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "rolled")
 }
-siteratiodif = function(yr1, yr2, site){
-  catratiodif(yr1 = yr1, yr2 = yr2, site = site, defense = "any", new = T)
-  catratiodif(yr1 = yr1, yr2 = yr2, site = site, defense = "all defended", new = F)
-  catratiodif(yr1 = yr1, yr2 = yr2, site = site, defense = "none", new = F)
-  catratiodif(yr1 = yr1, yr2 = yr2, site = site, defense = "hairy", new = F)
-  catratiodif(yr1 = yr1, yr2 = yr2, site = site, defense = "tented", new = F)
-  catratiodif(yr1 = yr1, yr2 = yr2, site = site, defense = "rolled", new = F)
-}
-par(mfrow = c(2, 3), mar = c(6, 5, 4, 1))
 
-siteratiodif(yr1 = 2024, yr2 = 2025, site = "Eno River State Park")
-sitedif(yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve")
-sitedif(yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation")
-sitedif(yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden")
-sitedif(yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus")
+sitecatratio = function(ylim = c(0,5), main, def = c(1,1,1,1), yr, site, legend = "def"){
+  PLOT(ylim = ylim, xlab = "Date", ylab = "Defended/Undefended Caterpillar Ratio", main = main, cex.main = 2, cex.axis = 1.5, cex.lab = 1.5)
+  if(def[1]==1) catratio(yr = yr, site = site, defense = "all defended", legend = legend)
+  if(def[2]==1) catratio(yr = yr, site = site, defense = "hairy")
+  if(def[3]==1) catratio(yr = yr, site = site, defense = "tented")
+  if(def[4]==1) catratio(yr = yr, site = site, defense = "rolled")
+}
+
+sitescatratio = function(ylim = c(0, 0.5), main, def = c(1,1,1,1,1,1), yr, site, legend = "site"){
+  PLOT(ylim = ylim, xlab = "Date", ylab = "Defended/Undefended Caterpillar Ratio", main = main, cex.main = 2, cex.axis = 1.5, cex.lab = 1.5)
+  if(def[1]==1) catratio(yr = yr, site = "Eno River State Park", defense = "all defended", legend = legend, legcex = 1)
+  if(def[2]==1) catratio(yr = yr, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", defense = "all defended")
+  if(def[3]==1) catratio(yr = yr, site = "Prairie Ridge Ecostation", defense = "all defended")
+  if(def[4]==1) catratio(yr = yr, site = "NC Botanical Garden", defense = "all defended")
+  if(def[5]==1) catratio(yr = yr, site = "UNC Chapel Hill Campus", defense = "all defended")
+  if(def[6]==1) catratio(yr = yr, site = "all", defense = "all defended")
+}
+
+
+
+sitecatdif(main = "2025-2024 at Eno", def = c(1,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", legend = T)
+sitecatdif(main = "2025-2024 at JM", def = c(1,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve")
+sitecatdif(main = "2025-2024 at Prairie Ridge", def = c(1,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation")
+sitecatdif(main = "2025-2024 at NCBG", def = c(1,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden")
+sitecatdif(ylim = c(-25, 40), main = "2025-2024 at UNC", def = c(1,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus")
+
+sitecatdif(main = "2024-pre2024 at Eno", def = c(1,1,1,0,0,0), yr1 = c(2021:2023), yr2 = 2024, site = "Eno River State Park", legend = T)
+sitecatdif(main = "2024-pre2024 at JM", def = c(1,1,1,0,0,0), yr1 = c(2021:2023), yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve")
+sitecatdif(main = "2024-pre2024 at Prairie Ridge", def = c(1,1,1,0,0,0), yr1 = c(2021:2023), yr2 = 2024, site = "Prairie Ridge Ecostation")
+sitecatdif(main = "2024-pre2024 at NCBG", def = c(1,1,1,0,0,0), yr1 = c(2021:2023), yr2 = 2024, site = "NC Botanical Garden")
+sitecatdif(ylim = c(-30, 25), main = "2024-pre2024 at UNC", def = c(1,1,1,0,0,0), yr1 = c(2021:2023), yr2 = 2024, site = "UNC Chapel Hill Campus")
+
+
+sitescatratio(main = "Defended/Undefended ratio in 2024", yr = 2024)
+sitescatratio(main = "Defended/Undefended ratio in 2025", yr = 2025)
+
