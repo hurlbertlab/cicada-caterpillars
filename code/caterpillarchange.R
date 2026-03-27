@@ -261,21 +261,22 @@ catratio = function(surveyData = srvyData, site, yr,
                     lengthRange = c(0, 100),
                     ...){
   def = meanDensity(surveyData, site = site, year = yr, ordersToInclude = "caterpillar", defense = defense, lengthRange = lengthRange)%>%ungroup()%>%
-    select(julianweek, meanDensity, fracSurveys, meanBiomass)
+    select(julianweek, Name, meanDensity, fracSurveys, meanBiomass)
   undef = meanDensity(surveyData, site = site, year = yr, ordersToInclude = "caterpillar", defense = "undefended", lengthRange = lengthRange)%>%ungroup()%>%
-    select(julianweek, meanDensity, fracSurveys, meanBiomass)
+    select(julianweek, Name, meanDensity, fracSurveys, meanBiomass)
   
-  defratio = left_join(def, undef, by = join_by("julianweek")) %>%
+  defratio = left_join(def, undef, by = join_by("julianweek", "Name")) %>%
     mutate(fracratio = fracSurveys.x/fracSurveys.y) %>%
     mutate(biomassratio = meanBiomass.x/meanBiomass.y) %>%
     mutate(densityratio = meanDensity.x/meanDensity.y) %>%
     as.data.frame()
     
-  color = sitecolsh$col[sitecolsh$defense == site]
-  shape = sitecolsh$shape[sitecolsh$defense == site]
+  color = sitecolsh$col[sitecolsh$site == site]
+  shape = sitecolsh$shape[sitecolsh$site == site]
 
   points(defratio$julianweek, defratio[, plotVar],
          type = 'b', col = color, pch = shape, lwd = 2, ...)
+  abline(h = 1, lty = 3)
   return(defratio)
 }
 
@@ -284,10 +285,10 @@ catratiodif = function(yr1, yr2, site,
                   plotVar = "fracratiodif",
                   defense = "all defended", #"hairy", "tented", or "rolled"
                   lengthRange = c(0, 100)){
-  yr1ratio = catratio(site, yr = yr1,
+  yr1ratio = catratio(site = site, yr = yr1,
                       defense = defense,
                       lengthRange = lengthRange)
-  yr2ratio = catratio(site, yr = yr2,
+  yr2ratio = catratio(site = site, yr = yr2,
                       defense = defense,
                       lengthRange = lengthRange)
   yr2yr = left_join(yr1ratio, yr2ratio, by = "julianweek")%>%
@@ -354,7 +355,7 @@ defdensity = function(new = T, ylim = c(0, 50), ylab, main, def = c(1,1,1,1,1,1)
 # }
 ##plots ratio for one defense type for all sites, probably more useful
 sitescatratio = function(ylim = c(0, 1), main, sites = c(1,1,1,1,1,1), plotVar = "fracratio", yr, defense = "all defended", lengthRange = c(0, 100), ...){
-  PLOT(ylim = ylim, xlab = "Date", ylab = "Defended/Undefended Caterpillar Ratio", main = main, cex.main = 2, cex.axis = 1.5, cex.lab = 1.5)
+  PLOT(ylim = ylim, xlab = "Date", ylab = "Defended/Undefended Caterpillar Ratio", main = main, cex.main = 1.5, cex.axis = 1.5, cex.lab = 1.5)
   if(sites[1]==1) catratio(yr = yr, site = "Eno River State Park", plotVar = plotVar, defense = defense, lengthRange = lengthRange, ...)
   if(sites[2]==1) catratio(yr = yr, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", plotVar = plotVar, defense = defense, lengthRange = lengthRange, ...)
   if(sites[3]==1) catratio(yr = yr, site = "Prairie Ridge Ecostation", plotVar = plotVar, defense = defense, lengthRange = lengthRange, ...)
@@ -404,7 +405,7 @@ addlegend = function(x = "topleft", colsh = "def", dd = F, subset = c(1,1,1,1,1,
 
 
 
-scd = function(ylim = c(-25, 25), ylab = "Change in Caterpillar Count", main, def = c(1,1,1,0,0,0), dd = T, yr1, yr2, site, lengthRange, legend = F, ...){
+scd = function(ylim = c(-25, 25), ylab = "Change in Caterpillar Count", main, def = c(1,1,1,0,0,0), dd = T, yr1, yr2, site, lengthRange, legend = F, legcex = 1.2, ...){
   ddy = c()
   if(dd == T){
     ddy[1] = ifelse(yr1 == "pre-2024" | yr2 == "pre-2024", 1, 0)
@@ -413,9 +414,20 @@ scd = function(ylim = c(-25, 25), ylab = "Change in Caterpillar Count", main, de
   defdensity(ylim = ylim, ylab = ylab, def = def, main = main, yr = yr1, site = site, lengthRange = lengthRange, lty = 2, ...)
   defdensity(new = F, def = def, yr = yr2, site = site, lengthRange = lengthRange, lty = 2, ...)
   sitecatdif(new = F, def = def, yr1 = yr1, yr2 = yr2, site = site, lengthRange = lengthRange, ...)
-  if(legend == T) addlegend(dd = T, subset = c(def, ddy), pt.cex = 2, cex = 1.2, y.intersp = 0.5)
+  if(legend == T) addlegend(dd = T, subset = c(def, ddy), pt.cex = 2, cex = legcex, y.intersp = 0.5)
 }
 
+
+#all caterpillars 2025-2024
+par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
+
+scd(ylim = c(-5, 20), main = "2025-2024 at Eno", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", lengthRange = c(0, 100), legend = T, cex = 2)
+scd(ylim = c(-10, 20), main = "2025-2024 at JM", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-5, 30), main = "2025-2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-5, 10), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(0, 100), cex = 2)
+
+#large caterpillars 2025-2024
 par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
 
 scd(ylim = c(-5, 15), main = "2025-2024 at Eno", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", lengthRange = c(10, 100), legend = T, cex = 2)
@@ -425,6 +437,16 @@ scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 20
 scd(ylim = c(-5, 5), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(10, 100), cex = 2)
 
 
+#all caterpillars 2025-2024
+par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
+
+scd(ylim = c(-5, 15), main = "2025-2024 at Eno", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", lengthRange = c(10, 100), legend = T, cex = 2)
+scd(ylim = c(-10, 15), main = "2025-2024 at JM", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(10, 100), cex = 2)
+scd(ylim = c(-5, 20), main = "2025-2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation", lengthRange = c(10, 100), cex = 2)
+scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden", lengthRange = c(10, 100), cex = 2)
+scd(ylim = c(-5, 5), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(10, 100), cex = 2)
+
+#large caterpillars 2024-pre2024
 par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
 
 scd(ylim = c(-5, 15), main = "2024-pre2024 at Eno", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Eno River State Park", lengthRange = c(10, 100), legend = T, cex = 2)
@@ -434,12 +456,29 @@ scd(ylim = c(-5, 10), main = "2024-pre2024 at NCBG", def = c(0,1,1,0,0,0), yr1 =
 scd(ylim = c(-5, 5), main = "2024-pre2024 at UNC", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(10, 100), cex = 2)
 
 
-par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
+par(mfrow = c(1, 2), mar = c(6, 5, 4, 1))
+sitescatratio(ylim = c(0, 2), main = "Defended/Undefended ratio in 2024", sites = c(1,1,1,1,1,0), plotVar = "fracratio", yr = 2024, lengthRange = c(0, 100), cex = 2)
+addlegend(x = "topleft", colsh = "site", subset = c(1,1,1,1,1,0), inset = c(0, 0), cex = 0.9, y.intersp = 0.7)
+sitescatratio(ylim = c(0, 2), main = "Defended/Undefended ratio in 2025", sites = c(1,1,1,1,1,0), plotVar = "fracratio", yr = 2025, lengthRange = c(0, 100), cex = 2)
 
-sitescatratio(main = "Defended/Undefended ratio in 2024", sites = c(1,1,1,1,1,1), plotVar = "fracratio", yr = 2024, lengthRange = c(10, 100), cex = 2)
-sitescatratio(main = "Defended/Undefended ratio in 2025", plotVar = "fracratio", yr = 2025, lengthRange = c(10, 100), cex = 2)
+par(mfrow = c(1, 2), mar = c(6, 5, 4, 1))
+sitescatratio(ylim = c(0, 2), main = "Defended/Undefended ratio in 2024", sites = c(0,0,0,0,0,1), plotVar = "fracratio", yr = 2024, lengthRange = c(0, 100), cex = 2)
+addlegend(x = "topleft", colsh = "site", subset = c(0,0,0,0,0,1), inset = c(0.1, 0.1), cex = 1.5, y.intersp = 0.7)
+sitescatratio(ylim = c(0, 2), main = "Defended/Undefended ratio in 2025", sites = c(0,0,0,0,0,1), plotVar = "fracratio", yr = 2025, lengthRange = c(0, 100), cex = 2)
 
-sitescatratiodif(main = "2025-2024 Ratio Difference", sites = c(1,1,1,1,1,1), yr1 = 2024, yr2 = 2025, lengthRange = c(15, 100))
+
+par(mfrow = c(1, 2), mar = c(6, 5, 4, 1))
+sitescatratio(ylim = c(0, 2), main = "Defended/Undefended ratio in 2024", sites = c(1,1,1,1,1,0), plotVar = "densityratio", yr = 2024, lengthRange = c(0, 100), cex = 2)
+addlegend(x = "topleft", colsh = "site", subset = c(1,1,1,1,1,0), inset = c(0, 0), cex = 0.9, y.intersp = 0.7)
+sitescatratio(ylim = c(0, 2), main = "Defended/Undefended ratio in 2025", sites = c(1,1,1,1,1,0), plotVar = "densityratio", yr = 2025, lengthRange = c(0, 100), cex = 2)
+
+par(mfrow = c(1, 2), mar = c(6, 5, 4, 1))
+sitescatratio(ylim = c(0, 2), main = "Defended/Undefended ratio in 2024", sites = c(0,0,0,0,0,1), plotVar = "densityratio", yr = 2024, lengthRange = c(0, 100), cex = 2)
+addlegend(x = "topleft", colsh = "site", subset = c(0,0,0,0,0,1), inset = c(0.1, 0.1), cex = 1.5, y.intersp = 0.7)
+sitescatratio(ylim = c(0, 2), main = "Defended/Undefended ratio in 2025", sites = c(0,0,0,0,0,1), plotVar = "densityratio", yr = 2025, lengthRange = c(0, 100), cex = 2)
+
+
+sitescatratiodif(ylim = c(-1, 2), main = "2025-2024 Ratio Difference", sites = c(1,1,1,1,1,1), yr1 = 2024, yr2 = 2025, lengthRange = c(15, 100))
 
 
 
