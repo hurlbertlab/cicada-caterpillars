@@ -43,9 +43,10 @@ predation = function(x_min = 130, x_max = 190,
                      type = 'b',
                      shsize = 2,
                      axissize = 1,
-                     labelsize = 1,
-                     mainsize = 1,
+                     labelsize = 1.5,
+                     mainsize = 1.5,
                      main,
+                     legend = F,
                      legcex = 0.5,
                      ...) {
   ifelse("eno" %in% sites, s1 <- "Eno River State Park", s1 <- 0)
@@ -89,14 +90,23 @@ predation = function(x_min = 130, x_max = 190,
            type = type, col = colsh$col[i], pch = colsh$shape[i], cex = shsize, lwd = 2)}
   }
   axis.Date(1, at = seq(x_min, x_max, by = 12), format = "%b %d", cex.axis = 1)
-  legend("topleft", legend = colsh[,1],
+  if(legend){legend("topleft", legend = colsh[,1],
          col = colsh$col,
          pch = colsh$shape,
          lwd = 2,
+         pt.cex = 2,
          cex = legcex)
+  }
 }
 
-predation(sites = c("eno"), yr = c(2024, 2025), mode = 1, main = "Clay Caterpillar Predation at Eno", legcex = 1)
+par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
+
+predation(sites = c("eno"), yr = c(2024, 2025), mode = 1, main = "Clay Caterpillar Predation at Eno", legend = T, legcex = 1)
+predation(sites = c("jm"), yr = c(2024, 2025), mode = 1, main = "Clay Caterpillar Predation at Johnston Mill", legcex = 1)
+predation(sites = c("pr"), yr = c(2024, 2025), mode = 1, main = "Clay Caterpillar Predation at Prairie Ridge", legcex = 1)
+predation(sites = c("ncbg"), yr = c(2024, 2025), mode = 1, main = "Clay Caterpillar Predation at NCBG", legcex = 1)
+predation(sites = c("unc"), yr = c(2024, 2025), mode = 1, main = "Clay Caterpillar Predation at UNC", legcex = 1)
+
 predation(sites = c("eno", "jm", "pr", "ncbg", "unc"), yr = 2024, mode = 2, main = "Clay Caterpillar Predation at All Sites")
 
 ###adding

@@ -427,24 +427,42 @@ scd(ylim = c(-5, 30), main = "2025-2024 at Prairie Ridge", def = c(0,1,1,0,0,0),
 scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden", lengthRange = c(0, 100), cex = 2)
 scd(ylim = c(-5, 10), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(0, 100), cex = 2)
 
+#small caterpillars 2025-2024
+par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
+
+scd(ylim = c(-5, 20), main = "2025-2024 at Eno", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", lengthRange = c(0, 10), legend = T, cex = 2)
+scd(ylim = c(-10, 20), main = "2025-2024 at JM", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 10), cex = 2)
+scd(ylim = c(-5, 30), main = "2025-2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation", lengthRange = c(0, 10), cex = 2)
+scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden", lengthRange = c(0, 10), cex = 2)
+scd(ylim = c(-5, 10), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(0, 10), cex = 2)
+
 #large caterpillars 2025-2024
 par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
 
-scd(ylim = c(-5, 15), main = "2025-2024 at Eno", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", lengthRange = c(10, 100), legend = T, cex = 2)
-scd(ylim = c(-10, 15), main = "2025-2024 at JM", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(10, 100), cex = 2)
-scd(ylim = c(-5, 20), main = "2025-2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation", lengthRange = c(10, 100), cex = 2)
-scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden", lengthRange = c(10, 100), cex = 2)
-scd(ylim = c(-5, 5), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(10, 100), cex = 2)
+scd(ylim = c(-5, 15), main = "2025-2024 at Eno", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", lengthRange = c(10, 10), legend = T, cex = 2)
+scd(ylim = c(-10, 15), main = "2025-2024 at JM", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(10, 10), cex = 2)
+scd(ylim = c(-5, 20), main = "2025-2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation", lengthRange = c(10, 10), cex = 2)
+scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden", lengthRange = c(10, 10), cex = 2)
+scd(ylim = c(-5, 5), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(10, 10), cex = 2)
 
 
-#all caterpillars 2025-2024
+#all caterpillars 2024-pre2024
 par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
 
-scd(ylim = c(-5, 15), main = "2025-2024 at Eno", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", lengthRange = c(10, 100), legend = T, cex = 2)
-scd(ylim = c(-10, 15), main = "2025-2024 at JM", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(10, 100), cex = 2)
-scd(ylim = c(-5, 20), main = "2025-2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation", lengthRange = c(10, 100), cex = 2)
-scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden", lengthRange = c(10, 100), cex = 2)
-scd(ylim = c(-5, 5), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(10, 100), cex = 2)
+scd(ylim = c(-15, 20), main = "2024-pre2024 at Eno", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Eno River State Park", lengthRange = c(0, 100), legend = T, cex = 2)
+scd(ylim = c(-5, 25), main = "2024-pre2024 at JM", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-5, 15), main = "2024-pre2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-5, 10), main = "2024-pre2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-5, 5), main = "2024-pre2024 at UNC", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(0, 100), cex = 2)
+
+#small caterpillars 2024-pre2024
+par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
+
+scd(ylim = c(-15, 20), main = "2024-pre2024 at Eno", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Eno River State Park", lengthRange = c(0, 10), legend = T, cex = 2)
+scd(ylim = c(-5, 25), main = "2024-pre2024 at JM", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-5, 15), main = "2024-pre2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(0, 10), cex = 2)
+scd(ylim = c(-5, 10), main = "2024-pre2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(0, 10), cex = 2)
+scd(ylim = c(-5, 5), main = "2024-pre2024 at UNC", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(0, 10), cex = 2)
 
 #large caterpillars 2024-pre2024
 par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
