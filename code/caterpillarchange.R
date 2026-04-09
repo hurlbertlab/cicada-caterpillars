@@ -231,11 +231,13 @@ catdif = function(surveyData = srvyData, yr1, yr2, site,
                plotVar = "fracSurveysdif",
                defense = "all caterpillars", #or "undefended", "all defended", "hairy", "tented", or "rolled"
                lengthRange = c(0, 100), connected = F,
+               offset = 0,
                ...){
   catyr1 = meanDensity(surveyData, year = yr1, site = site, ordersToInclude = "caterpillar", defense = defense, lengthRange = lengthRange)%>%ungroup()%>%
     select(julianweek, Name, meanDensity, fracSurveys, meanBiomass)
   catyr2 = meanDensity(surveyData, year = yr2, site = site, ordersToInclude = "caterpillar", defense = defense, lengthRange = lengthRange)%>%ungroup()%>%
-    select(julianweek, Name, meanDensity, fracSurveys, meanBiomass)
+    select(julianweek, Name, meanDensity, fracSurveys, meanBiomass)%>%
+    mutate(julianweek = julianweek + offset)
   yr2yr = left_join(catyr1, catyr2, by = join_by("julianweek", "Name")) %>%
     mutate(fracSurveysdif = fracSurveys.y - fracSurveys.x) %>%
     mutate(meanBiomassdif = meanBiomass.y - meanBiomass.x) %>%
@@ -319,16 +321,16 @@ sitesdensity = function(ylim = c(0, 50), main, sites = c(1,1,1,1,1,1), yr, order
 }
 
 ##plots density difference between two years
-sitecatdif = function(new = T, ylim = c(-25, 25), main, def = c(1,1,1,1,1,1), yr1, yr2, site, lengthRange = c(0, 100), ...){
+sitecatdif = function(new = T, ylim = c(-25, 25), main, def = c(1,1,1,1,1,1), yr1, yr2, site, lengthRange = c(0, 100), offset = 0, ...){
   if(yr1 == "pre-2024"){yr1 = c(2021:2023)}
   if(yr2 == "pre-2024"){yr2 = c(2021:2023)}
   if(new) PLOT(ylim = ylim, xlab = "Date", ylab = "Change in Caterpillar Count", main = main, cex.main = 2, cex.axis = 1.5, cex.lab = 1.5)
-  if(def[1]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "all caterpillars", lengthRange = lengthRange, ...)
-  if(def[2]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "undefended", lengthRange = lengthRange, ...)
-  if(def[3]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "all defended", lengthRange = lengthRange, ...)
-  if(def[4]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "hairy", lengthRange = lengthRange, ...)
-  if(def[5]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "tented", lengthRange = lengthRange, ...)
-  if(def[6]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "rolled", lengthRange = lengthRange, ...)
+  if(def[1]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "all caterpillars", lengthRange = lengthRange, offset = offset, ...)
+  if(def[2]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "undefended", lengthRange = lengthRange, offset = offset, ...)
+  if(def[3]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "all defended", lengthRange = lengthRange, offset = offset, ...)
+  if(def[4]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "hairy", lengthRange = lengthRange, offset = offset, ...)
+  if(def[5]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "tented", lengthRange = lengthRange, offset = offset, ...)
+  if(def[6]==1) catdif(yr1 = yr1, yr2 = yr2, site = site, defense = "rolled", lengthRange = lengthRange, offset = offset, ...)
 }
 ##plots density by defense
 ddcolsh = data.frame(by = c("pre-2024", 2024, 2025), col = c("gray87", "gray70", "gray45"), shape = c(20,20,20))
@@ -405,51 +407,53 @@ addlegend = function(x = "topleft", colsh = "def", dd = F, subset = c(1,1,1,1,1,
 
 
 
-scd = function(ylim = c(-25, 25), ylab = "Change in Caterpillar Count", main, def = c(1,1,1,0,0,0), dd = T, yr1, yr2, site, lengthRange, legend = F, legcex = 1.2, ...){
+scd = function(ylim = c(-25, 25), ylab = "Change in Caterpillar Count", main, def = c(1,1,1,0,0,0), dd = T, yr1, yr2, site, lengthRange, offset = 0, legend = F, legcex = 1.2, ...){
   ddy = c()
   if(dd == T){
     ddy[1] = ifelse(yr1 == "pre-2024" | yr2 == "pre-2024", 1, 0)
     ddy[2] = ifelse(yr1 == 2024 | yr2 == 2024, 1, 0)
-    ddy[3] = ifelse(yr1 == 2025 | yr2 == 2025, 1, 0)}
-  defdensity(ylim = ylim, ylab = ylab, def = def, main = main, yr = yr1, site = site, lengthRange = lengthRange, lty = 2, ...)
-  defdensity(new = F, def = def, yr = yr2, site = site, lengthRange = lengthRange, lty = 2, ...)
-  sitecatdif(new = F, def = def, yr1 = yr1, yr2 = yr2, site = site, lengthRange = lengthRange, ...)
-  if(legend == T) addlegend(dd = T, subset = c(def, ddy), pt.cex = 2, cex = legcex, y.intersp = 0.5)
+    ddy[3] = ifelse(yr1 == 2025 | yr2 == 2025, 1, 0)
+    defdensity(ylim = ylim, ylab = ylab, def = def, main = main, yr = yr1, site = site, lengthRange = lengthRange, lty = 2, ...)
+    defdensity(new = F, def = def, yr = yr2, site = site, lengthRange = lengthRange, lty = 2, ...)
+    sitecatdif(new = F, def = def, yr1 = yr1, yr2 = yr2, site = site, lengthRange = lengthRange, offset = offset, ...)
+    }
+  if(dd == F) sitecatdif(ylim = ylim, ylab = ylab, main = main, def = def, yr1 = yr1, yr2 = yr2, site = site, lengthRange = lengthRange, offset = offset, ...)
+  if(legend == T) addlegend(dd = dd, subset = c(def, ddy), pt.cex = 2, cex = legcex, y.intersp = 0.5)
 }
 
 
-#all caterpillars 2025-2024
+#all caterpillars 2024-2025
 par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
 
-scd(ylim = c(-5, 20), main = "2025-2024 at Eno", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", lengthRange = c(0, 100), legend = T, cex = 2)
-scd(ylim = c(-10, 20), main = "2025-2024 at JM", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 100), cex = 2)
-scd(ylim = c(-5, 30), main = "2025-2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation", lengthRange = c(0, 100), cex = 2)
-scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden", lengthRange = c(0, 100), cex = 2)
-scd(ylim = c(-5, 10), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-15, 25), main = "2024-2025 at Eno", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Eno River State Park", lengthRange = c(0, 100), legend = T, cex = 2)
+scd(ylim = c(-10, 25), main = "2024-2025 at JM", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-25, 35), main = "2024-2025 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-5, 10), main = "2024-2025 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(0, 100), cex = 2)
+scd(ylim = c(-5, 10), main = "2024-2025 at UNC", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(0, 100), cex = 2)
 
 #small caterpillars 2025-2024
 par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
 
-scd(ylim = c(-5, 20), main = "2025-2024 at Eno", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", lengthRange = c(0, 10), legend = T, cex = 2)
-scd(ylim = c(-10, 20), main = "2025-2024 at JM", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 10), cex = 2)
-scd(ylim = c(-5, 30), main = "2025-2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation", lengthRange = c(0, 10), cex = 2)
-scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden", lengthRange = c(0, 10), cex = 2)
-scd(ylim = c(-5, 10), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(0, 10), cex = 2)
+scd(ylim = c(-10, 20), main = "2024-2025 at Eno", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Eno River State Park", lengthRange = c(0, 10), legend = T, cex = 2)
+scd(ylim = c(-10, 20), main = "2024-2025 at JM", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 10), cex = 2)
+scd(ylim = c(-15, 20), main = "2024-2025 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(0, 10), cex = 2)
+scd(ylim = c(-5, 10), main = "2024-2025 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(0, 10), cex = 2)
+scd(ylim = c(-10, 10), main = "2024-2025 at UNC", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(0, 10), cex = 2)
 
 #large caterpillars 2025-2024
 par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
 
-scd(ylim = c(-5, 15), main = "2025-2024 at Eno", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Eno River State Park", lengthRange = c(10, 10), legend = T, cex = 2)
-scd(ylim = c(-10, 15), main = "2025-2024 at JM", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(10, 10), cex = 2)
-scd(ylim = c(-5, 20), main = "2025-2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "Prairie Ridge Ecostation", lengthRange = c(10, 10), cex = 2)
-scd(ylim = c(-5, 10), main = "2025-2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "NC Botanical Garden", lengthRange = c(10, 10), cex = 2)
-scd(ylim = c(-5, 5), main = "2025-2024 at UNC", def = c(0,1,1,0,0,0), yr1 = 2024, yr2 = 2025, site = "UNC Chapel Hill Campus", lengthRange = c(10, 10), cex = 2)
+scd(ylim = c(-5, 15), main = "2024-2025 at Eno", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Eno River State Park", lengthRange = c(10, 10), legend = T, cex = 2)
+scd(ylim = c(-10, 15), main = "2024-2025 at JM", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(10, 10), cex = 2)
+scd(ylim = c(-5, 5), main = "2024-2025 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(10, 10), cex = 2)
+scd(ylim = c(-5, 5), main = "2024-2025 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(10, 10), cex = 2)
+scd(ylim = c(-5, 5), main = "2024-2025 at UNC", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(10, 10), cex = 2)
 
 
 #all caterpillars 2024-pre2024
 par(mfrow = c(3, 2), mar = c(6, 5, 4, 1))
 
-scd(ylim = c(-15, 20), main = "2024-pre2024 at Eno", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Eno River State Park", lengthRange = c(0, 100), legend = T, cex = 2)
+scd(ylim = c(-15, 25), main = "2024-pre2024 at Eno", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Eno River State Park", lengthRange = c(0, 100), legend = T, cex = 2)
 scd(ylim = c(-5, 25), main = "2024-pre2024 at JM", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 100), cex = 2)
 scd(ylim = c(-5, 15), main = "2024-pre2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(0, 100), cex = 2)
 scd(ylim = c(-5, 10), main = "2024-pre2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(0, 100), cex = 2)
@@ -472,6 +476,71 @@ scd(ylim = c(-5, 15), main = "2024-pre2024 at JM", def = c(0,1,1,0,0,0), yr1 = "
 scd(ylim = c(-5, 15), main = "2024-pre2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(10, 100), cex = 2)
 scd(ylim = c(-5, 10), main = "2024-pre2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(10, 100), cex = 2)
 scd(ylim = c(-5, 5), main = "2024-pre2024 at UNC", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(10, 100), cex = 2)
+
+
+#now if you want to do that all again, but with the weeks compared to the same week +/- a week, you can use offset
+
+scdoffset = function(ylim = c(-25, 25), ylab = "Change in Caterpillar Count", main, def = c(1,1,1,0,0,0), dd = T, yr1, yr2, site, lengthRange, offset, legend = F, legcex = 1.2, ...){
+  scd(ylim = ylim, main = main, def = def, dd = F, yr1 = yr1, yr2 = yr2, site = site, lengthRange = lengthRange, offset = -7, legend = T, cex = 2)
+  scd(ylim = ylim, main = main, def = def, dd = F, yr1 = yr1, yr2 = yr2, site = site, lengthRange = lengthRange, offset = 0, legend = F, cex = 2)
+  scd(ylim = ylim, main = main, def = def, dd = F, yr1 = yr1, yr2 = yr2, site = site, lengthRange = lengthRange, offset = 7, legend = F, cex = 2)
+}
+
+
+#all caterpillars 2024-2025
+par(mfcol = c(3, 2), mar = c(6, 5, 4, 1))
+
+scdoffset(ylim = c(-15, 10), main = "2024-2025 at Eno", def = c(0,1,1,0,0,0), dd = F, yr1 = 2025, yr2 = 2024, site = "Eno River State Park", lengthRange = c(0, 100), cex = 2)
+scdoffset(ylim = c(-15, 20), main = "2024-2025 at JM", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 100), cex = 2)
+scdoffset(ylim = c(-30, 10), main = "2024-2025 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(0, 100), cex = 2)
+scdoffset(ylim = c(-10, 10), main = "2024-2025 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(0, 100), cex = 2)
+scdoffset(ylim = c(-10, 10), main = "2024-2025 at UNC", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(0, 100), cex = 2)
+
+#small caterpillars 2025-2024
+par(mfcol = c(3, 2), mar = c(6, 5, 4, 1))
+
+scdoffset(ylim = c(-5, 20), main = "2024-2025 at Eno", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Eno River State Park", lengthRange = c(0, 10), legend = T, cex = 2)
+scdoffset(ylim = c(-10, 20), main = "2024-2025 at JM", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 10), cex = 2)
+scdoffset(ylim = c(-5, 30), main = "2024-2025 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(0, 10), cex = 2)
+scdoffset(ylim = c(-5, 10), main = "2024-2025 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(0, 10), cex = 2)
+scdoffset(ylim = c(-5, 10), main = "2024-2025 at UNC", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(0, 10), cex = 2)
+
+#large caterpillars 2025-2024
+par(mfcol = c(3, 2), mar = c(6, 5, 4, 1))
+
+scdoffset(ylim = c(-5, 15), main = "2024-2025 at Eno", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Eno River State Park", lengthRange = c(10, 10), legend = T, cex = 2)
+scdoffset(ylim = c(-10, 15), main = "2024-2025 at JM", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(10, 10), cex = 2)
+scdoffset(ylim = c(-5, 20), main = "2024-2025 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(10, 10), cex = 2)
+scdoffset(ylim = c(-5, 10), main = "2024-2025 at NCBG", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(10, 10), cex = 2)
+scdoffset(ylim = c(-5, 5), main = "2024-2025 at UNC", def = c(0,1,1,0,0,0), yr1 = 2025, yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(10, 10), cex = 2)
+
+
+#all caterpillars 2024-pre2024
+par(mfcol = c(3, 2), mar = c(6, 5, 4, 1))
+
+scdoffset(ylim = c(-15, 20), main = "2024-pre2024 at Eno", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Eno River State Park", lengthRange = c(0, 100), legend = T, cex = 2)
+scdoffset(ylim = c(-5, 25), main = "2024-pre2024 at JM", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 100), cex = 2)
+scdoffset(ylim = c(-5, 15), main = "2024-pre2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(0, 100), cex = 2)
+scdoffset(ylim = c(-5, 10), main = "2024-pre2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(0, 100), cex = 2)
+scdoffset(ylim = c(-5, 5), main = "2024-pre2024 at UNC", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(0, 100), cex = 2)
+
+#small caterpillars 2024-pre2024
+par(mfcol = c(3, 2), mar = c(6, 5, 4, 1))
+
+scdoffset(ylim = c(-15, 20), main = "2024-pre2024 at Eno", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Eno River State Park", lengthRange = c(0, 10), legend = T, cex = 2)
+scdoffset(ylim = c(-5, 25), main = "2024-pre2024 at JM", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(0, 100), cex = 2)
+scdoffset(ylim = c(-5, 15), main = "2024-pre2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(0, 10), cex = 2)
+scdoffset(ylim = c(-5, 10), main = "2024-pre2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(0, 10), cex = 2)
+scdoffset(ylim = c(-5, 5), main = "2024-pre2024 at UNC", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(0, 10), cex = 2)
+
+#large caterpillars 2024-pre2024
+par(mfcol = c(3, 2), mar = c(6, 5, 4, 1))
+
+scdoffset(ylim = c(-5, 15), main = "2024-pre2024 at Eno", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Eno River State Park", lengthRange = c(10, 100), legend = T, cex = 2)
+scdoffset(ylim = c(-5, 15), main = "2024-pre2024 at JM", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Triangle Land Conservancy - Johnston Mill Nature Preserve", lengthRange = c(10, 100), cex = 2)
+scdoffset(ylim = c(-5, 15), main = "2024-pre2024 at Prairie Ridge", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "Prairie Ridge Ecostation", lengthRange = c(10, 100), cex = 2)
+scdoffset(ylim = c(-5, 10), main = "2024-pre2024 at NCBG", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "NC Botanical Garden", lengthRange = c(10, 100), cex = 2)
+scdoffset(ylim = c(-5, 5), main = "2024-pre2024 at UNC", def = c(0,1,1,0,0,0), yr1 = "pre-2024", yr2 = 2024, site = "UNC Chapel Hill Campus", lengthRange = c(10, 100), cex = 2)
 
 
 par(mfrow = c(1, 2), mar = c(6, 5, 4, 1))
