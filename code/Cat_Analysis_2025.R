@@ -469,7 +469,7 @@ legend("topright",
 
 
 #2 panel plot for during and after emergence (Figure 7)
-layout(matrix(c(1, 2, 3, 3), nrow = 2, ncol = 2, byrow = TRUE), 
+layout(matrix(c(1, 2, 3, 0), nrow = 2, ncol = 2, byrow = TRUE), 
        heights = c(4, 1.5))
 par(mar = c(6, 6, 5, 2))
 par(mar = c(6, 6, 5, 2))
@@ -482,14 +482,14 @@ cicada_analysis <- fracdataframe %>%
             mean_frac = mean(truefrac, na.rm = TRUE),
             nSurvs = (SUM_nsurveys),  
             lower_ci = mean(truefrac, na.rm = TRUE) - 1.96 * sqrt((mean(truefrac, na.rm = TRUE) * (1 - mean(truefrac, na.rm = TRUE))) / sum(SUM_nsurveys)),
-            upper_ci = mean(truefrac, na.rm = TRUE) + 1.96 * sqrt((mean(truefrac, na.rm = TRUE) * (1 - mean(truefrac, na.rm = TRUE))) / (SUM_nsurveys))
+            upper_ci = mean(truefrac, na.rm = TRUE) + 1.96 * sqrt((mean(truefrac, na.rm = TRUE) * (1 - mean(truefrac, na.rm = TRUE))) / sum(SUM_nsurveys))
   ) %>%
   ungroup()
 
 
 plot(0, 0, 
      xlim = c(0.5, 3.5), 
-     ylim = c(-0.005, 0.20),
+     ylim = c(-0.005, 0.25),
      cex.lab =2,
      las = 1,
      lwd = 3, 
@@ -503,7 +503,7 @@ plot(0, 0,
 axis(1, at = c(1, 2, 3), labels = c("Pre-2024", "2024", "Post-2024"), cex.axis = 1.7)
 mtext("May 14 - June 13", side = 1, line = 3, cex = 1.9)
 
-y_ticks <- seq(0, 0.2, by = 0.05) 
+y_ticks <- seq(0, 0.25, by = 0.05) 
 axis(2, at = y_ticks, labels = paste0(y_ticks * 100), cex.axis = 2)
 
 for (site in unique(cicada_analysis$site)) {
@@ -539,7 +539,7 @@ for (site in unique(cicada_analysis$site)) {
            lwd = 1)
 }
 
-text(2.3, 0.19, "p = 0.019", cex = 2, adj = 1)
+text(2.3, 0.22, "p = 0.019", cex = 2, adj = 1)
 
 #########After cicada emergence graph
 cicada_analysis_nocicada <- fracdataframe %>%
@@ -556,7 +556,7 @@ cicada_analysis_nocicada <- fracdataframe %>%
 
 plot(0, 0, 
      xlim = c(0.5, 3.5), 
-     ylim = c(-0.005, 0.20),
+     ylim = c(-0.005, 0.25),
      cex.lab =2,
      las = 1,
      lwd = 3, 
@@ -570,7 +570,7 @@ plot(0, 0,
 axis(1, at = c(1, 2, 3), labels = c("Pre-2024", "2024", "Post-2024"), cex.axis = 1.7)
 mtext("June 14 - July 31", side = 1, line = 3, cex = 1.9)
 
-y_ticks <- seq(0, 0.2, by = 0.05) 
+y_ticks <- seq(0, 0.25, by = 0.05) 
 axis(2, at = y_ticks, labels = paste0(y_ticks * 100), cex.axis = 2)
 
 for (site in unique(cicada_analysis_nocicada$site)) {
@@ -607,16 +607,16 @@ for (site in unique(cicada_analysis_nocicada$site)) {
 }
 
 #legend for during and after cicada emergence
-text(2.3, 0.19, "p = 0.013", cex = 2, adj = 1)
+text(2.3, 0.22, "p = 0.013", cex = 2, adj = 1)
 
-par(mar = c(0, 0, 0, 0))
+par(mar = c(0, 0, 0, 1))
 plot.new()
-legend("center", 
+legend("left", 
        legend = site_colors$Name, 
        col = site_colors$Color, 
        lwd = 2, 
        pch = 16, 
-       cex = 1,
+       cex = 1.3,
        horiz = FALSE)
 
 
